@@ -22,7 +22,8 @@ class DriverType(Enum):
 
 
 class Browser:
-    def __init__(self, driver_type=DriverType.Chrome, browser_exe_path='', version='', grid=False, command_executor=''):
+    def __init__(self, driver_type=DriverType.Chrome, browser_exe_path=None, version=None, grid=False,
+                 command_executor=None):
         self.__driver = None
         self.__driver_type = driver_type
         self.__browser_exe_path = browser_exe_path
@@ -39,7 +40,7 @@ class Browser:
         self.__driver = value
 
     @property
-    def driver_type(self):
+    def driver_type(self) -> DriverType:
         return self.__driver_type
 
     @driver_type.setter
@@ -47,7 +48,7 @@ class Browser:
         self.__driver_type = driver_type
 
     @property
-    def browser_exe_path(self):
+    def browser_exe_path(self) -> str:
         return self.__browser_exe_path
 
     @browser_exe_path.setter
@@ -55,7 +56,7 @@ class Browser:
         self.__driver_type = browser_exe_path
 
     @property
-    def version(self):
+    def version(self) -> str:
         return self.__version
 
     @version.setter
@@ -63,7 +64,7 @@ class Browser:
         self.__version = version
 
     @property
-    def grid(self):
+    def grid(self) -> bool:
         return self.__grid
 
     @grid.setter
@@ -71,7 +72,7 @@ class Browser:
         self.__grid = grid
 
     @property
-    def command_executor(self):
+    def command_executor(self) -> str:
         return self.__command_executor
 
     @command_executor.setter
@@ -84,9 +85,8 @@ class Browser:
         sleep(2)
         return self
 
-    def quit(self):
+    def quit(self) -> None:
         self.driver.quit()
-        return None
 
     def drivers(self):
         try:
@@ -115,7 +115,7 @@ class Browser:
         except Exception as e:
             print(f'-------驱动异常------：{e}')
 
-    def __test_driver_manager_chrome(self):
+    def __test_driver_manager_chrome(self) -> driver:
         self.option = ChromeOptions()
         self.option.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.service = ChromeService(executable_path=ChromeDriverManager().install())
@@ -123,7 +123,7 @@ class Browser:
         self.driver.maximize_window()
         return self.driver
 
-    def __test_edge_session(self):
+    def __test_edge_session(self) -> driver:
         self.option = EdgeOptions()
         self.option.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.service = EdgeService(executable_path=EdgeChromiumDriverManager().install())
@@ -131,7 +131,7 @@ class Browser:
         self.driver.maximize_window()
         return self.driver
 
-    def __test_firefox_session(self):
+    def __test_firefox_session(self) -> driver:
         self.option = FirefoxOptions()
         # option.headless = True
         # option.add_experimental_option('excludeSwitches', ['enable-automation'])
@@ -140,7 +140,7 @@ class Browser:
         self.driver.maximize_window()
         return self.driver
 
-    def __test_ie_session(self):
+    def __test_ie_session(self) -> driver:
         #  IE浏览器会有问题
         self.option = IeOptions()
         self.option.file_upload_dialog_timeout = 2000
@@ -149,7 +149,7 @@ class Browser:
         self.driver.maximize_window()
         return self.driver
 
-    def __test_other_browser_session(self):
+    def __test_other_browser_session(self) -> driver:
         """
         :return: driver
         """
@@ -161,7 +161,7 @@ class Browser:
         self.driver.maximize_window()
         return self.driver
 
-    def __grid_chrome(self):
+    def __grid_chrome(self) -> driver:
         self.chrome_options = webdriver.ChromeOptions()
         self.chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
         # chrome_options.set_capability("browserVersion", "104")
@@ -183,11 +183,6 @@ class Browser:
 
     def __grid_other(self):
         pass
-
-
-def open1(url):
-    driver1 = Browser().driver()
-    driver1.get('url')
 
 
 if __name__ == "__main__":
