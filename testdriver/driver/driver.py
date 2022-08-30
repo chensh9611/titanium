@@ -1,8 +1,10 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.firefox.service import Service as FirefoxService
 from selenium.webdriver.ie.service import Service as IEService
+from selenium.webdriver.support.wait import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.firefox import GeckoDriverManager
 from webdriver_manager.microsoft import EdgeChromiumDriverManager
@@ -10,7 +12,8 @@ from webdriver_manager.microsoft import IEDriverManager
 from selenium.webdriver import ChromeOptions, EdgeOptions, FirefoxOptions, IeOptions
 from time import sleep
 from enum import Enum
-from driverVersion import check_chrome_driver_update
+from testdriver import DownloadDriver
+from selenium.webdriver.support import expected_conditions as EC
 
 
 class DriverType(Enum):
@@ -21,23 +24,25 @@ class DriverType(Enum):
     Other = 'Other'
 
 
+class T(Enum):
+    XPATH = 'By.XPATH'
+    ID = 'By.ID'
+
+
 class Browser:
-    def __init__(self, driver_type=DriverType.Chrome, browser_exe_path=None, version=None, grid=False,
+    def __init__(self, driver_type=DriverType.Chrome, browser_exe_path=None, browser_version=None, grid=False,
                  command_executor=None):
-        self.__driver = None
         self.__driver_type = driver_type
         self.__browser_exe_path = browser_exe_path
-        self.__version = version
+        self.__browser_version = browser_version
         self.__grid = grid
         self.__command_executor = command_executor
+        self.driver = None
+        self.current_element = None
 
-    @property
-    def driver(self):
-        return self.__driver
-
-    @driver.setter
-    def driver(self, value):
-        self.__driver = value
+    def __call__(self, *args, **kwargs):
+        self.drivers()
+        return self
 
     @property
     def driver_type(self) -> DriverType:
@@ -56,12 +61,12 @@ class Browser:
         self.__driver_type = browser_exe_path
 
     @property
-    def version(self) -> str:
-        return self.__version
+    def browser_version(self) -> str:
+        return self.__browser_version
 
-    @version.setter
-    def version(self, version):
-        self.__version = version
+    @browser_version.setter
+    def browser_version(self, version):
+        self.__browser_version = version
 
     @property
     def grid(self) -> bool:
@@ -78,15 +83,6 @@ class Browser:
     @command_executor.setter
     def command_executor(self, command_executor):
         self.__command_executor = command_executor
-
-    def open(self, url):
-        self.driver = self.drivers()
-        self.driver.get(url)
-        sleep(2)
-        return self
-
-    def quit(self) -> None:
-        self.driver.quit()
 
     def drivers(self):
         try:
@@ -113,55 +109,55 @@ class Browser:
             else:
                 return self.__test_driver_manager_chrome()
         except Exception as e:
-            print(f'-------驱动异常------：{e}')
+            print(f'-------Drive exception------：{e}')
 
-    def __test_driver_manager_chrome(self) -> driver:
+    def __test_driver_manager_chrome(self):
         self.option = ChromeOptions()
         self.option.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.service = ChromeService(executable_path=ChromeDriverManager().install())
         self.driver = webdriver.Chrome(options=self.option, service=self.service)
         self.driver.maximize_window()
-        return self.driver
+        return self
 
-    def __test_edge_session(self) -> driver:
+    def __test_edge_session(self):
         self.option = EdgeOptions()
         self.option.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.service = EdgeService(executable_path=EdgeChromiumDriverManager().install())
         self.driver = webdriver.Edge(options=self.option, service=self.service)
         self.driver.maximize_window()
-        return self.driver
+        return self
 
-    def __test_firefox_session(self) -> driver:
+    def __test_firefox_session(self):
         self.option = FirefoxOptions()
         # option.headless = True
         # option.add_experimental_option('excludeSwitches', ['enable-automation'])
         self.service = FirefoxService(executable_path=GeckoDriverManager().install())
         self.driver = webdriver.Firefox(options=self.option, service=self.service)
         self.driver.maximize_window()
-        return self.driver
+        return self
 
-    def __test_ie_session(self) -> driver:
+    def __test_ie_session(self):
         #  IE浏览器会有问题
         self.option = IeOptions()
         self.option.file_upload_dialog_timeout = 2000
         self.service = IEService(executable_path=IEDriverManager().install())
         self.driver = webdriver.Ie(service=self.service, options=self.option)
         self.driver.maximize_window()
-        return self.driver
+        return self
 
-    def __test_other_browser_session(self) -> driver:
+    def __test_other_browser_session(self):
         """
         :return: driver
         """
-        check_chrome_driver_update(self.version)
+        DownloadDriver().check_browser_driver_update(browser_version=self.browser_version)
         self.option = ChromeOptions()
         self.option.binary_location = self.browser_exe_path
         self.service = ChromeService('./driverVersionMange/chromedriver.exe')
         self.driver = webdriver.Chrome(service=self.service, options=self.option)
         self.driver.maximize_window()
-        return self.driver
+        return self
 
-    def __grid_chrome(self) -> driver:
+    def __grid_chrome(self):
         self.chrome_options = webdriver.ChromeOptions()
         self.chrome_options.add_experimental_option('excludeSwitches', ['enable-automation'])
         # chrome_options.set_capability("browserVersion", "104")
@@ -170,7 +166,7 @@ class Browser:
             command_executor=self.command_executor,
             options=self.chrome_options
         )
-        return self.driver
+        return self
 
     def __grid_edge(self):
         pass
@@ -184,10 +180,34 @@ class Browser:
     def __grid_other(self):
         pass
 
+    def open(self, url):
+        self.driver.get(url)
+        sleep(2)
+        return self
+
+    def quit(self) -> None:
+        self.driver.quit()
+
+    def find_element(self, *loc):
+        try:
+            WebDriverWait(self.driver, 10).until(EC.visibility_of_element_located(loc))
+            self.current_element = self.driver.find_element(*loc)
+            return self
+        except AttributeError:
+            print(f'当前页面未找到{(self, loc)}元素')
+        return
+
+    def set_value(self, value):
+        self.current_element.send_keys(value)
+
 
 if __name__ == "__main__":
-    driver = Browser()
-    driver.open('https://www.baidu.com').quit()
-    # driver = Browser().driver()
-    # driver.get('https://www.selenium.dev/zh-cn/documentation/webdriver/browser/alerts/')
-    # driver.quit()
+    # Browser().open('https://www.baidu.com').elements()
+    # T = Browser().drivers()
+    # T.open('http://150.158.10.162/#/login?redirect=/&params={}').find_element(By.XPATH,
+    #                                                                           '/html/body/div/div[1]/div[2]/div/div/div/div[2]/div[1]/form/div[1]/div/div/textarea').send_keys(
+    #     'sadddddddddd')
+    # T.find_element(By.XPATH, '/html/body/div/div[1]/div[2]/div/div/div/div[1]/div/div/div/div[3]').click()
+    driver = Browser().drivers()
+    a = '/html/body/div/div[1]/div[2]/div/div/div/div[2]/div[1]/form/div[1]/div/div/textarea'
+    driver.open('http://150.158.10.162/#/login?redirect=/&params={}').find_element(By.XPATH, a).set_value('尘世阿红')
