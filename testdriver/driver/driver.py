@@ -14,6 +14,7 @@ from time import sleep
 from enum import Enum
 from testdriver import DownloadDriver
 from selenium.webdriver.support import expected_conditions as EC
+import time
 
 
 class DriverType(Enum):
@@ -182,7 +183,6 @@ class Browser:
 
     def open(self, url):
         self.driver.get(url)
-        sleep(2)
         return self
 
     def quit(self) -> None:
@@ -199,6 +199,15 @@ class Browser:
 
     def set_value(self, value):
         self.current_element.send_keys(value)
+        return self
+
+    def click(self):
+        self.current_element.click()
+        return self
+
+    def sleep(self, value):
+        time.sleep(value)
+        return self
 
 
 if __name__ == "__main__":
@@ -207,7 +216,14 @@ if __name__ == "__main__":
     # T.open('http://150.158.10.162/#/login?redirect=/&params={}').find_element(By.XPATH,
     #                                                                           '/html/body/div/div[1]/div[2]/div/div/div/div[2]/div[1]/form/div[1]/div/div/textarea').send_keys(
     #     'sadddddddddd')
-    # T.find_element(By.XPATH, '/html/body/div/div[1]/div[2]/div/div/div/div[1]/div/div/div/div[3]').click()
+
     driver = Browser().drivers()
+    b = '/html/body/div/div[1]/div[2]/div/div/div/div[1]/div/div/div/div[3]'
     a = '/html/body/div/div[1]/div[2]/div/div/div/div[2]/div[1]/form/div[1]/div/div/textarea'
-    driver.open('http://150.158.10.162/#/login?redirect=/&params={}').find_element(By.XPATH, a).set_value('尘世阿红')
+    driver.open('http://150.158.10.162/#/login?redirect=/&params={}') \
+        .find_element(By.XPATH, a) \
+        .set_value('尘世阿红').sleep(3) \
+        .find_element(By.XPATH, b) \
+        .click() \
+        .sleep(3) \
+        .quit()
